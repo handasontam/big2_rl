@@ -12,6 +12,7 @@ def convertAvailableActions(availAcs):
     availAcs[np.nonzero(availAcs==1)] = 0
     return availAcs
 
+
 class handPlayed:
     def __init__(self, hand, player):
         self.hand = hand
@@ -61,26 +62,25 @@ class big2Game:
             whoHas3D = 3
         else:
             whoHas3D = 4
-        self.currentHands[whoHas3D] = self.currentHands[whoHas3D][1:]
-        self.cardsPlayed[whoHas3D-1][0] = 1
+        self.whoHas3D = whoHas3D
         self.goIndex = 1
         self.handsPlayed = {}
-        self.handsPlayed[self.goIndex] = handPlayed([1],whoHas3D)
+        self.handsPlayed[self.goIndex] = handPlayed([],whoHas3D)
         self.goIndex += 1
-        self.playersGo = whoHas3D + 1
+        self.playersGo = whoHas3D
         if self.playersGo == 5:
             self.playersGo = 1
         self.passCount = 0
-        self.control = 0
+        self.control = 1
         self.neuralNetworkInputs = {}
-        self.neuralNetworkInputs[1] = np.zeros((412,), dtype=int)
+        self.neuralNetworkInputs[1] = np.zeros((412,), dtype=int)  # 412 dimensional state vector
         self.neuralNetworkInputs[2] = np.zeros((412,), dtype=int)
         self.neuralNetworkInputs[3] = np.zeros((412,), dtype=int)
         self.neuralNetworkInputs[4] = np.zeros((412,), dtype=int)
-        nPlayerInd = 22*13
+        nPlayerInd = 22*13  # see Figure 3
         nnPlayerInd = nPlayerInd + 27
         nnnPlayerInd = nnPlayerInd + 27
-        #initialize number of cards
+        #initialize number of cards left for each next player
         for i in range(1,5):
             self.neuralNetworkInputs[i][nPlayerInd+12]=1
             self.neuralNetworkInputs[i][nnPlayerInd+12]=1
@@ -314,8 +314,8 @@ class big2Game:
             handToPlay = self.currentHands[self.playersGo][enumerateOptions.inverseTwoCardIndices[option]]
         elif nCards == 3:
             handToPlay = self.currentHands[self.playersGo][enumerateOptions.inverseThreeCardIndices[option]]
-        elif nCards == 4:
-            handToPlay = self.currentHands[self.playersGo][enumerateOptions.inverseFourCardIndices[option]]
+        # elif nCards == 4:
+            # handToPlay = self.currentHands[self.playersGo][enumerateOptions.inverseFourCardIndices[option]]
         else:
             handToPlay = self.currentHands[self.playersGo][enumerateOptions.inverseFiveCardIndices[option]]
         for i in handToPlay:
@@ -337,12 +337,26 @@ class big2Game:
         totCardsLeft = 0
         for i in range(1,5):
             nC = self.currentHands[i].size
+            if (((nC >= 8) and (nC <=9)) or ((nC == self.whoHas3D) and (nC == 7))):
+                nC = 2 * nC
+            elif (nC >= 10) and (nC <= 12):
+                nC = 3 * nC
+            elif (nC == 13):
+                nC = 4 * nC
+            totCardsLeft += nC
+        for i in range(1,5):
+            nC = self.currentHands[i].size
+            if (((nC >= 8) and (nC <=9)) or ((nC == self.whoHas3D) and (nC == 7))):
+                nC = 2 * nC
+            elif (nC >= 10) and (nC <= 12):
+                nC = 3 * nC
+            elif (nC == 13):
+                nC = 4 * nC
             if nC == 0:
                 winner = i
             else:
-                self.rewards[i-1] = -1*nC
-                totCardsLeft += nC
-        self.rewards[winner-1] = totCardsLeft
+                self.rewards[i-1] = (-4*nC) + totCardsLeft
+        self.rewards[winner-1] = totCardsLeft + 10
         
     def randomOption(self):
         cHand = self.currentHands[self.playersGo]
@@ -352,24 +366,31 @@ class big2Game:
             if nCards > 1:
                 handOptions = gameLogic.handsAvailable(cHand)
             if nCards == 1:
-                options = enumerateOptions.oneCardOptions(cHand,prevHand,1)
+                next_player_index = (self.playersGo) % 4 + 1
+                next_player_num_cards = len(self.currentHands[next_player_index])
+                if next_player_num_cards == 1:  # next player has last card
+                    options = enumerateOptions.oneCardOptions(cHand,prevHand,3)
+                else:
+                    options = enumerateOptions.oneCardOptions(cHand,prevHand,1)
             elif nCards == 2:
                 options = enumerateOptions.twoCardOptions(handOptions, prevHand, 1)
             elif nCards == 3:
                 options = enumerateOptions.threeCardOptions(handOptions, prevHand, 1)
-            elif nCards == 4:
-                if gameLogic.isFourOfAKind(prevHand):
-                    options = enumerateOptions.fourCardOptions(handOptions, prevHand, 2)
-                else:
-                    options = enumerateOptions.fourCardOptions(handOptions, prevHand, 1)
+            # elif nCards == 4:
+            #     if gameLogic.isFourOfAKind(prevHand):
+            #         options = enumerateOptions.fourCardOptions(handOptions, prevHand, 2)
+            #     else:
+            #         options = enumerateOptions.fourCardOptions(handOptions, prevHand, 1)
             else:
                 if gameLogic.isStraight(prevHand):
                     if gameLogic.isFlush(prevHand):
-                        options = enumerateOptions.fiveCardOptions(handOptions, prevHand, 4)
+                        options = enumerateOptions.fiveCardOptions(handOptions, prevHand, 5)
                     else:
                         options = enumerateOptions.fiveCardOptions(handOptions, prevHand, 1)
                 elif gameLogic.isFlush(prevHand):
                     options = enumerateOptions.fiveCardOptions(handOptions, prevHand, 2)
+                elif gameLogic.isKingKong(prevHand):
+                    options = enumerateOptions.fiveCardOptions(handOptions, prevHand, 4)
                 else:
                     options = enumerateOptions.fiveCardOptions(handOptions, prevHand, 3)
             if isinstance(options,int):
@@ -377,6 +398,7 @@ class big2Game:
             else:
                 nOptions = len(options)
             ind = random.randint(0,nOptions)
+            # TODO: handle case where the next player has last card, and we have options, then we cannot pass
             if ind == nOptions or isinstance(options,int):
                 return -1 #pass
             else:
@@ -384,10 +406,18 @@ class big2Game:
         else:
             #we have control - choose from any option
             handOptions = gameLogic.handsAvailable(cHand)
-            oneCardOptions = enumerateOptions.oneCardOptions(cHand)
+            # consider the next player has last card
+            next_player_index = (self.playersGo) % 4 + 1
+            next_player_num_cards = len(self.currentHands[next_player_index])
+            if next_player_num_cards == 1:  # next player has last card
+                oneCardOptions = enumerateOptions.oneCardOptions(cHand, [], 2)
+            else:
+                oneCardOptions = enumerateOptions.oneCardOptions(cHand)
+
+
             twoCardOptions = enumerateOptions.twoCardOptions(handOptions)
             threeCardOptions = enumerateOptions.threeCardOptions(handOptions)
-            fourCardOptions = enumerateOptions.fourCardOptions(handOptions)
+            # fourCardOptions = enumerateOptions.fourCardOptions(handOptions)
             fiveCardOptions = enumerateOptions.fiveCardOptions(handOptions)
             if isinstance(oneCardOptions, int):
                 n1 = 0
@@ -401,15 +431,16 @@ class big2Game:
                 n3 = 0
             else:
                 n3 = len(threeCardOptions)
-            if isinstance(fourCardOptions, int):
-                n4 = 0
-            else:
-                n4 = len(fourCardOptions)
+            # if isinstance(fourCardOptions, int):
+                # n4 = 0
+            # else:
+                # n4 = len(fourCardOptions)
             if isinstance(fiveCardOptions, int):
                 n5 = 0
             else:
                 n5 = len(fiveCardOptions)
-            nTot = n1 + n2 + n3 + n4 + n5
+            # nTot = n1 + n2 + n3 + n4 + n5
+            nTot = n1 + n2 + n3 + n5
             ind = random.randint(0,nTot-1)
             if ind < n1:
                 return (oneCardOptions[ind],1)
@@ -417,13 +448,19 @@ class big2Game:
                 return (twoCardOptions[ind-n1],2)
             elif ind < (n1+n2+n3):
                 return (threeCardOptions[ind-n1-n2],3)
-            elif ind < (n1+n2+n3+n4):
-                return (fourCardOptions[ind-n1-n2-n3],4)
+            # elif ind < (n1+n2+n3+n4):
+                # return (fourCardOptions[ind-n1-n2-n3],4)
             else:
-                return (fiveCardOptions[ind-n1-n2-n3-n4],5)
+                return (fiveCardOptions[ind-n1-n2-n3],5)
             
     def returnAvailableActions(self):
-    
+        """. This vector is ordered with 
+        one-card actions in indices 0 − 12, 
+        two-card actions from 13 − 45, 
+        three-card actions from 46 − 76, 
+        four-card actions from 77 − 406, 
+        five-card actions from 407 − 1693 and then finally 
+        1694 corresponding to the pass action"""
         currHand = self.currentHands[self.playersGo]
         availableActions = np.zeros((enumerateOptions.nActions[5]+1,))
         
@@ -438,30 +475,41 @@ class big2Game:
                 handOptions = gameLogic.handsAvailable(currHand)
                 
             if nCardsToBeat == 1:
-                options = enumerateOptions.oneCardOptions(currHand, prevHand,1)
+                next_player_index = (self.playersGo % 4) + 1
+                next_player_num_cards = len(self.currentHands[next_player_index])
+                if next_player_num_cards == 1:  # next player has last card
+                    options = enumerateOptions.oneCardOptions(currHand,prevHand,3)
+                else:
+                    options = enumerateOptions.oneCardOptions(currHand,prevHand,1)
             elif nCardsToBeat == 2:
                 options = enumerateOptions.twoCardOptions(handOptions, prevHand, 1)
             elif nCardsToBeat == 3:
                 options = enumerateOptions.threeCardOptions(handOptions, prevHand, 1)
-            elif nCardsToBeat == 4:
-                if gameLogic.isFourOfAKind(prevHand):
-                    options = enumerateOptions.fourCardOptions(handOptions, prevHand, 2)
-                else:
-                    options = enumerateOptions.fourCardOptions(handOptions, prevHand, 1)
+            # elif nCardsToBeat == 4:
+                # if gameLogic.isFourOfAKind(prevHand):
+                    # options = enumerateOptions.fourCardOptions(handOptions, prevHand, 2)
+                # else:
+                    # options = enumerateOptions.fourCardOptions(handOptions, prevHand, 1)
             else:
                 if gameLogic.isStraight(prevHand):
                     if gameLogic.isFlush(prevHand):
-                        options = enumerateOptions.fiveCardOptions(handOptions, prevHand, 4)
+                        options = enumerateOptions.fiveCardOptions(handOptions, prevHand, 5)
                     else:
                         options = enumerateOptions.fiveCardOptions(handOptions, prevHand, 1)
                 elif gameLogic.isFlush(prevHand):
                     options = enumerateOptions.fiveCardOptions(handOptions, prevHand, 2)
+                elif gameLogic.isKingKong(prevHand):
+                    options = enumerateOptions.fiveCardOptions(handOptions, prevHand, 4)
                 else:
                     options = enumerateOptions.fiveCardOptions(handOptions, prevHand, 3)
                     
             if isinstance(options, int): #no options - must pass
                 return availableActions
-            
+            else:
+                # if next player is last card and we have options, we can't pass
+                if (nCardsToBeat == 1) and (next_player_num_cards == 1):
+                    availableActions[enumerateOptions.passInd] = 0  # not allow pass
+
             for option in options:
                 index = enumerateOptions.getIndex(option, nCardsToBeat)
                 availableActions[index] = 1
@@ -471,16 +519,21 @@ class big2Game:
         
         else: #player has control.
             handOptions = gameLogic.handsAvailable(currHand)
-            oneCardOptions = enumerateOptions.oneCardOptions(currHand)
+            # consider the next player has last card
+            next_player_index = (self.playersGo % 4) + 1
+            next_player_num_cards = len(self.currentHands[next_player_index])
+            if next_player_num_cards == 1:  # next player has last card
+                oneCardOptions = enumerateOptions.oneCardOptions(currHand, [], 2)
+            else:
+                oneCardOptions = enumerateOptions.oneCardOptions(currHand)
             twoCardOptions = enumerateOptions.twoCardOptions(handOptions)
             threeCardOptions = enumerateOptions.threeCardOptions(handOptions)
-            fourCardOptions = enumerateOptions.fourCardOptions(handOptions)
+            # fourCardOptions = enumerateOptions.fourCardOptions(handOptions)
             fiveCardOptions = enumerateOptions.fiveCardOptions(handOptions)
             
             for option in oneCardOptions:
                 index = enumerateOptions.getIndex(option, 1)
                 availableActions[index] = 1
-                
             if not isinstance(twoCardOptions, int):
                 for option in twoCardOptions:
                     index = enumerateOptions.getIndex(option, 2)
@@ -491,16 +544,37 @@ class big2Game:
                     index = enumerateOptions.getIndex(option, 3)
                     availableActions[index] = 1
                     
-            if not isinstance(fourCardOptions, int):
-                for option in fourCardOptions:
-                    index = enumerateOptions.getIndex(option, 4)
-                    availableActions[index] = 1
+            # if not isinstance(fourCardOptions, int):
+            #     for option in fourCardOptions:
+            #         index = enumerateOptions.getIndex(option, 4)
+            #         availableActions[index] = 1
                     
             if not isinstance(fiveCardOptions, int):
                 for option in fiveCardOptions:
                     index = enumerateOptions.getIndex(option, 5)
                     availableActions[index] = 1
-                    
+            
+            if self.goIndex == 2:
+                #first go - can only play oneCard/ twoCard/ threeCard / fiveCard that has 3D
+                availableActions[1:13] = 0  # only 3D is allowed in OneCard options
+                # only 3D is allowed in TwoCard options
+                # availableActions[13] is (3D,3C)
+                # availableActions[14] is (3D,3H)
+                # availableActions[15] is (3D,3S)
+                # availableActions[16] is (3C,3H), ...
+                # Starting from availableActions[16] to availableActions[45] are all pairs without 3D
+                availableActions[16:46] = 0 
+                # only 3D is allowed in ThreeCard options
+                # availableActions[46] is (3D,3C,3H)
+                # availableActions[47] is (3D,3C,3S)
+                # availableActions[48] is (3D,3H,3S), ...
+                # Starting from availableActions[49] to availableActions[76] are all triples without 3D
+                availableActions[49:77] = 0
+                # only 3D is allowed in FiveCard options
+                # there are 495 FiveCard actions associated with 3D
+                availableActions[407+495:] = 0
+
+
             return availableActions
 
     def step(self, action):

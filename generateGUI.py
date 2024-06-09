@@ -6,8 +6,9 @@ import big2Game
 import gameLogic
 import enumerateOptions
 from PPONetwork import PPONetwork, PPOModel
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 import joblib
+tf.disable_v2_behavior()
 
 mainGame = big2Game.big2Game()
 
@@ -16,6 +17,7 @@ outDim = 1695
 entCoef = 0.01
 valCoef = 0.5
 maxGradNorm = 0.5
+l2_coef = 5e-4
 sess = tf.Session()
 #networks for players
 playerNetworks = {}
@@ -24,16 +26,18 @@ playerNetworks[2] = PPONetwork(sess, inDim, outDim, "p2Net")
 playerNetworks[3] = PPONetwork(sess, inDim, outDim, "p3Net")
 playerNetworks[4] = PPONetwork(sess, inDim, outDim, "p4Net")
 playerModels = {}
-playerModels[1] = PPOModel(sess, playerNetworks[1], inDim, outDim, entCoef, valCoef, maxGradNorm)
-playerModels[2] = PPOModel(sess, playerNetworks[2], inDim, outDim, entCoef, valCoef, maxGradNorm)
-playerModels[3] = PPOModel(sess, playerNetworks[3], inDim, outDim, entCoef, valCoef, maxGradNorm)
-playerModels[4] = PPOModel(sess, playerNetworks[4], inDim, outDim, entCoef, valCoef, maxGradNorm)
+playerModels[1] = PPOModel(sess, playerNetworks[1], inDim, outDim, entCoef, valCoef, maxGradNorm, l2_coef)
+playerModels[2] = PPOModel(sess, playerNetworks[2], inDim, outDim, entCoef, valCoef, maxGradNorm, l2_coef)
+playerModels[3] = PPOModel(sess, playerNetworks[3], inDim, outDim, entCoef, valCoef, maxGradNorm, l2_coef)
+playerModels[4] = PPOModel(sess, playerNetworks[4], inDim, outDim, entCoef, valCoef, maxGradNorm, l2_coef)
 
 
 tf.global_variables_initializer().run(session=sess)
 
 #by default load current best
-params = joblib.load("modelParameters136500")
+rewardNormalization = 30.0  # see mainBig2PPOSimulation
+params = joblib.load("modelParameters13500")
+# params = joblib.load("modelParameters136500")
 playerNetworks[1].loadParams(params)
 playerNetworks[2].loadParams(params)
 playerNetworks[3].loadParams(params)
@@ -95,6 +99,7 @@ for i in range(5):
 
 top.geometry("1200x780")
 top.title("Big 2 - Game Visualization and Testing")
+
 
 def updatePrevHands():
     sX = 520
@@ -275,11 +280,12 @@ def updateScreen():
 def updateValue():
     go, state, actions = mainGame.getCurrentState()
     val = playerNetworks[go].value(state, actions)
-    valueValue.set(str(val[0]))
+    valueValue.set(str(val[0] * rewardNormalization))
     
 def updateProbNegLog(index):
     go, state, actions = mainGame.getCurrentState()
     nlp = playerModels[go].neglogp(state, actions, np.array([index]))
+    print(f"==>> nlp: {nlp}")
     prob = np.exp(-nlp)
     probNegLogValue.set(str(prob[0]))
         
@@ -596,6 +602,7 @@ NNFrame1.place(x=10,y=40)
 fontsize=6
 topNNLabels={}
 sideNNLabels={}
+
 for i in range(1,14):
     topNNLabels[i] = tkinter.Label(NNFrame1,text=("C"+str(i)),anchor="center",font=("Helvetica",fontsize),relief=tkinter.RIDGE).grid(row=0,column=i,sticky=tkinter.S)
 for i in range(1,23):
