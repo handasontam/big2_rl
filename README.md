@@ -1,7 +1,7 @@
 # Big 2 Self-Play Reinforcement Learning AI
 
 
-- This repo is largely based on https://github.com/henrycharlesworth/big2_PPOalgorithm
+- This repo is based on https://github.com/henrycharlesworth/big2_PPOalgorithm
 - Scoring rules is set according to https://big2.lihkg.com/ (see the following).
 - Game rules changed to Hong Kong style:
   - Don't allow JQKA2, QKA23, KA234
@@ -14,7 +14,7 @@
   - PPO
 - It is super-human level already according to my own experience.
 
-# Play with the AI with the trained model
+# Play against the AI with the pre-trained model
 ```
 conda env create -f environment.yml
 conda activate big2torch
@@ -69,3 +69,5 @@ python generateGUI_torch.py
 - Containerized the application.
 
 
+# Acknowledgement
+- Charlesworth, H. (2018). Application of self-play reinforcement learning to a four-player game of imperfect information. arXiv preprint arXiv:1808.10442.
