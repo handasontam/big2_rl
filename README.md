@@ -9,6 +9,7 @@
   - Don't allow playing Four-of-a-kind without a single card.
   - Allow playing King Kong (i.e. Four-of-a-kind + One card)
   - Don't allow playing two pairs.
+- Pytorch implementation
 - Implemented the following RL algorithms with additional ways to handle dynamic action space (to be documented...):
   - Neural Replicator Dynamics
   - PPO
