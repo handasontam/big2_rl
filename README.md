@@ -1,5 +1,6 @@
 # Big 2 Self-Play Reinforcement Learning AI
 
+![image](assets/game_play.png)
 
 - This repo is based on https://github.com/henrycharlesworth/big2_PPOalgorithm
 - Scoring rules is set according to https://big2.lihkg.com/ (see the following).
@@ -13,52 +14,40 @@
 - Implemented the following RL algorithms with additional ways to handle dynamic action space (to be documented...):
   - Neural Replicator Dynamics
   - PPO
-- It is super-human level already according to my own experience.
 
-# Play against the AI with the pre-trained model
+# Play against the AI with the pre-trained model (Only tested on Mac)
 ```
-conda env create -f environment.yml
+conda env create -f environment.yml 
 conda activate big2torch
 python generateGUI_torch.py
 ```
 
 # Game Scoring Rules
 
-## 完GAME時，以剩下手牌計分。 When the game ends, score based on remaining cards in hand.
+## When the game ends, score based on remaining cards in hand.
 
-## 基本分數 (Basic Scoring):
+## Basic Scoring:
 
-- 少於八張，每張一分；
-  Less than 8 cards, 1 point per card;
+- Less than 8 cards, 1 point per card;
 
-- ≥八張即雙炒(剩下手牌數 x 2)；
-  ≥8 cards is "double penalty" (remaining cards x 2);
+- ≥8 cards is "double penalty" (remaining cards x 2);
 
-- ≥十張即三炒(剩下手牌數 x 3)；
-  ≥10 cards is "triple penalty" (remaining cards x 3);
+- ≥10 cards is "triple penalty" (remaining cards x 3);
 
-- 十三張即四炒(剩下手牌數 x 4)。
-  13 cards is "quadruple penalty" (remaining cards x 4).
-
-**P.S.** 第一個出牌嘅玩家，手牌數≥七張即雙妙。
+- 13 cards is "quadruple penalty" (remaining cards x 4).
 
 **P.S.** For the first player to play a card, ≥7 cards is "double wonderful".
 
-## 最終得分 (Final Score):
+## Final Score:
 
-- A的得分=(B的牌分-A的牌分)+(C的牌分-A的牌分)+(D的牌分-A的牌分)
 - A's score = (B's card points - A's card points) + (C's card points - A's card points) + (D's card points - A's card points)
 
-- B的得分=(A的牌分-B的牌分)+(C的牌分-B的牌分)+(D的牌分-B的牌分)
 - B's score = (A's card points - B's card points) + (C's card points - B's card points) + (D's card points - B's card points)
 
-- C的得分=(A的牌分-C的牌分)+(B的牌分-C的牌分)+(D的牌分-C的牌分)
 - C's score = (A's card points - C's card points) + (B's card points - C's card points) + (D's card points - C's card points)
 
-- D的得分=(A的牌分-D的牌分)+(B的牌分-D的牌分)+(C的牌分-D的牌分)
 - D's score = (A's card points - D's card points) + (B's card points - D's card points) + (C's card points - D's card points)
 
-**P.S.** 第一名額外 +10 分獎勵
 **P.S.** The first place gets an additional +10 points bonus
 
 

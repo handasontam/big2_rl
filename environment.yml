@@ -1,4 +1,4 @@
-name: big2torch
+name: big2
 channels:
   - pytorch
   - conda-forge

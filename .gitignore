@@ -1,3 +1,8 @@
 modelParameters*
 !modelParameters_th_487000
 losses_th*
+play_gui.sh
+webui
+*.pyc
+__pycache__
+.DS_Store

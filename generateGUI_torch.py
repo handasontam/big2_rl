@@ -2,13 +2,12 @@ import tkinter
 from tkinter import messagebox
 from PIL import Image, ImageTk
 import numpy as np
-import big2Game_torch
-import enumerateOptions
-from PPONetwork_torch import PPONetwork, NeuRDNetwork, NeuRDSequentialNetwork
+import big2.big2Game_torch as big2Game_torch
+import big2.enumerateOptions as enumerateOptions
+from rl_models.PPONetwork_torch import PPONetwork, NeuRDNetwork, NeuRDSequentialNetwork
 # import joblib
 import torch.nn as nn
 import torch as th
-import gameLogic
 
 mainGame = big2Game_torch.big2Game()
 
@@ -31,7 +30,7 @@ playerNetworks[4] = NeuRDSequentialNetwork(inDim, 1695, {"pi": [512,512], "vf": 
 #by default load current best
 rewardNormalization = 30.0  # see mainBig2PPOSimulation
 # parameters_name = "./league/vanilla_10000"
-parameters_name = "./league/NeuRD_RichActsFeats/modelParameters_th_487000"
+parameters_name = "./model_parameters/NeuRD_RichActsFeats/modelParameters_th_487000"
 # params = joblib.load("modelParameters13500")
 # params = joblib.load("modelParameters136500")
 playerNetworks[1].load_state_dict(th.load(parameters_name, map_location=th.device('cpu')))
@@ -288,6 +287,7 @@ def updateValue():
     action_mask = th.from_numpy(action_mask).float()
     action_feats = [th.from_numpy(f).unsqueeze(0).float() for f in action_feats]
     # val = playerNetworks[go].forward_critic(state).item()
+    print(playerNetworks[go])
     val = playerNetworks[go].value(state, action_mask, action_feats).item()
     valueValue.set(str(val * rewardNormalization))
 
